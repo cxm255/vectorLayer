@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Windbar Layer</title>
+    <link rel="stylesheet" href="https://openlayers.org/en/v4.6.4/css/ol.css" type="text/css">
+    <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>
+    <!--<script src="https://openlayers.org/en/v4.6.4/build/ol.js"></script>-->
+    <script src="https://openlayers.org/en/v4.6.4/build/ol-debug.js"></script>
+    <script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdn.bootcss.com/d3/4.13.0/d3.min.js"></script>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map" class="map"></div>
+
+
+    <script src="js/components/element/drawTest.js"></script>
+    <script src="js/components/element/windbarLayer.js"></script>
+
+    <script>
+        // var source = new ol.source.TileJSON({
+        //     url: 'https://api.tiles.mapbox.com/v3/mapbox.world-bright.json?secure',
+        //     crossOrigin: 'anonymous'
+        // });
+        // var maplayer = new ol.layer.Tile({ source: source });
+        var source = new ol.source.Vector({
+            url: 'https://openlayers.org/en/v4.6.5/examples/data/geojson/countries-110m.geojson',
+            format: new ol.format.GeoJSON()
+        })
+        var maplayer = new ol.layer.Vector({
+            source: source
+        })
+        var map = new ol.Map({
+            logo: false,
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                }),
+                maplayer
+            ],
+            view: new ol.View({
+                center: ol.proj.transform(([120, 30]), 'EPSG:4326', 'EPSG:3857'),
+                zoom: 8
+            }),
+            controls: []
+        });
+
+
+        var windbarLayer, windbarLayerP;
+
+        var url = 'files/data/wind/WIND2017082513.csv';
+        d3.csv(url, function (record) {
+            var data = record;
+            if (data == null || data == undefined) {
+                console.log('%c data is undefined', 'color:red');
+                return;
+            }
+            var points = data.map(function (d) {
+                d.latLng = d.lon && d.lat ? [+d.lat, +d.lon] : [+d.y, +d.x];  //经纬度
+                //d.lon = +d.lon || +d.x;
+                //d.lat = +d.lat || +d.y;
+                d.Level = +(d.Level) || +(d.level);  //缩放级别
+                d.GRID_CODE = +d.GRID_CODE || +d.dir;  //方向
+                d.RASTERVALU = +d.RASTERVALU || +d.speed;  //速度
+                return d;
+            });
+
+            // if (windbarLayerP)
+            //     windbarLayerP._clearWind();
+
+            if (!windbarLayer) {
+                // DT_Windbar.init(0.8, "rgba(0,0,0, 0.8)");//百分比大小,颜色,风三角角度
+
+                var vectorLayer = new WindbarLayer(data, {
+                    layerName: '',
+                    minResolution: undefined,
+                    maxResolution: undefined,
+                    zIndex: 100,
+                    projection: 'EPSG:3857',
+                    ratio: 1,
+                    drawtype: 'wind'
+                })
+                vectorLayer.appendTo(map);
+                windbarLayerP = vectorLayer;
+                windbarLayer = vectorLayer.layer_;
+            }
+            else {
+                // windbarLayerP.setData(data)._update({});
+                windbarLayerP._update({ data: data });
+            }
+
+
+        });
+    </script>
+</body>
+
+</html>
